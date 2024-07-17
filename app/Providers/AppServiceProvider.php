@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Office;
+use App\Models\User;
+
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,5 +24,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
+        Relation::enforceMorphMap([
+             'user' => User::class,
+            'office'=>Office::class,
+        ]);
     }
 }
