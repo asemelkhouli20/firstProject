@@ -1,17 +1,8 @@
 <?php
-use App\Models\User;
-use App\Notifications\OrderShipped;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
 use App\Http\Controllers\PostController;
-use App\Jobs\SlowJob;
 
 Route::get('/', function () {
-    $user = User::inRandomOrder()->first();
-    Notification::send($user, new OrderShipped());
-
-
     return view('welcome');
 });
 

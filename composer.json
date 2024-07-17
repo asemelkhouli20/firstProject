@@ -53,7 +53,8 @@
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate --graceful --ansi"
         ],
-        "test": "./vendor/bin/pest"
+        "test-y": "./vendor/bin/pest tests/Feature",
+        "test-n": "./vendor/bin/pest tests/Normal"
 
     },
     "extra": {

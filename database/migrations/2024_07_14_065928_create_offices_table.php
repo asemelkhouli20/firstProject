@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->decimal('Lat', 11, 8);
-            $table->decimal('Ing', 11, 8);
+            $table->decimal('lng', 11, 8);
             $table->text('address_line1');
             $table->text('address_line2')->nullable();
             $table->integer('approval_status')->default(1);

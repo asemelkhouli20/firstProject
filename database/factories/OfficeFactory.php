@@ -23,7 +23,7 @@ class OfficeFactory extends Factory
             'title' => fake()->words(3,true),
             'description' => fake()->paragraph,
             'lat' => fake()->latitude,
-            'Ing' => fake()->longitude,
+            'lng' => fake()->longitude,
             'address_line1' => fake()->address,
             'approval_status' => Office::APPROVEL_APPROVED,
             'hidden' => false,
