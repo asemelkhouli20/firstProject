@@ -28,7 +28,7 @@ test('test_offices_does_not_countent_hidden_or_APPROVEL_APPROVED_get_rout_api', 
 test('test_offices_with_fillter_by_userID_get_rout_api', function () {
     $houst = User::factory()->create();
     $office = Office::factory()->for($houst)->create();
-    $response = $this->get('/api/offices?host_id=' . $houst->id);
+    $response = $this->get('/api/offices?user_id=' . $houst->id);
     $response->assertOk();
     $response->assertJsonCount(1, 'data');
     $this->assertEquals($office->id, $response->json('data')[0]['id']);
@@ -40,7 +40,7 @@ test('test_offices_with_fillter_by_userID_for_reservation_get_rout_api', functio
     Reservation::factory()->for($office)->for($user)->create();
     Reservation::factory()->for(Office::factory())->for(User::factory())->create();
 
-    $response = $this->get('/api/offices?user_id=' . $user->id);
+    $response = $this->get('/api/offices?visitor_id=' . $user->id);
     $response->assertOk();
     $response->assertJsonCount(1, 'data');
     $this->assertEquals($office->id, $response->json('data')[0]['id']);
