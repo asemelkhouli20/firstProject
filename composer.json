@@ -7,7 +7,11 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.9",
+        "laravel/horizon": "^5.25",
         "laravel/jetstream": "^5.1",
+        "laravel/prompts": "^0.1.24",
+        "laravel/pulse": "^1.2",
+        "laravel/reverb": "@beta",
         "laravel/sanctum": "^4.0",
         "laravel/scout": "^10.10",
         "laravel/socialite": "^5.15",
@@ -53,8 +57,7 @@
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate --graceful --ansi"
         ],
-        "test-y": "./vendor/bin/pest tests/Feature",
-        "test-n": "./vendor/bin/pest tests/Normal"
+        "test": "./vendor/bin/pest"
 
     },
     "extra": {

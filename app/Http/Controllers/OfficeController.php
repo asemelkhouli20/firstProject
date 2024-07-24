@@ -3,16 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOfficeRequest;
-use App\Http\Requests\UpdateOfficeRequest;
 use App\Http\Resources\OfficeResource;
 use App\Models\Office;
 use App\Models\Reservation;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OfficeController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -38,9 +45,21 @@ class OfficeController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request): JsonResource
     {
         //
+        $attributes = OfficeController::vidateOffice($request, 'create');
+        $attributes['approval_status'] = Office::APPROVEL_PENDING;
+        DB::beginTransaction();
+        $office = Office::Create(
+            Arr::except($attributes, ['tags'])
+        );
+        if (isset($attributes['tags'])) {
+            $office->tags()->sync($attributes['tags']);
+        }
+        DB::commit();
+
+        return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
 
     /**
@@ -74,9 +93,20 @@ class OfficeController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateOfficeRequest $request, Office $office)
+    public function update(Request $request, Office $office)
     {
         //
+        $this->authorize('update', $office);
+        $attributes = OfficeController::vidateOffice($request, 'update');
+        DB::beginTransaction();
+        $office->update(Arr::except($attributes, ['tags']));
+        if(isset($attributes['tags'])){
+            $office->tags()->sync($attributes['tags']);
+        }
+
+        DB::commit();
+
+        return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
 
     /**
@@ -85,5 +115,31 @@ class OfficeController extends Controller
     public function destroy(Office $office)
     {
         //
+    }
+
+    function vidateOffice(Request $request, string $metthod)
+    {
+        abort_unless(
+            auth()->user()->tokenCan('office.' . $metthod),
+            Response::HTTP_FORBIDDEN
+        );
+        $sometimes = Rule::when(($metthod == 'update'), 'sometimes') ;
+        $attributes = $request->validate([
+                'title'         => [$sometimes, 'required', 'string' ],
+                'description'   => [$sometimes, 'required', 'string' ],
+                'lat'           => [$sometimes, 'required', 'numeric'],
+                'lng'           => [$sometimes, 'required', 'numeric'],
+                'address_line1' => [$sometimes, 'required', 'string' ],
+                'price_per_day' => [$sometimes, 'required', 'integer', 'min:100'],
+
+                'hidden' => ['bool'],
+                'monthly_discount' => ['integer', 'min:0'],
+
+                'tags' => ['array'],
+                'tags.*' => ['integer', Rule::exists('tags', 'id')],
+            ]
+        );
+        $attributes['user_id'] = auth()->id();
+        return $attributes;
     }
 }

@@ -4,16 +4,19 @@ namespace App\Policies;
 
 use App\Models\Office;
 use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 
 class OfficePolicy
 {
+    use HandlesAuthorization;
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
         //
+        return true;
     }
 
     /**
@@ -22,6 +25,7 @@ class OfficePolicy
     public function view(User $user, Office $office): bool
     {
         //
+        return true;
     }
 
     /**
@@ -30,6 +34,7 @@ class OfficePolicy
     public function create(User $user): bool
     {
         //
+        return true;
     }
 
     /**
@@ -38,6 +43,7 @@ class OfficePolicy
     public function update(User $user, Office $office): bool
     {
         //
+       return $office->user_id == $user->id;
     }
 
     /**
@@ -46,6 +52,7 @@ class OfficePolicy
     public function delete(User $user, Office $office): bool
     {
         //
+        return $office->user_id == $user->id;
     }
 
     /**
@@ -54,6 +61,7 @@ class OfficePolicy
     public function restore(User $user, Office $office): bool
     {
         //
+        return $office->user_id == $user->id;
     }
 
     /**
@@ -62,5 +70,6 @@ class OfficePolicy
     public function forceDelete(User $user, Office $office): bool
     {
         //
+        return $office->user_id == $user->id;
     }
 }

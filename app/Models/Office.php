@@ -27,6 +27,21 @@ class Office extends Model
         "monthly_discount" => "integer",
         "hidden" => "bool",
     ];
+
+    protected $fillable = [
+        'user_id',
+        'title',
+        'description',
+        'lat',
+        'lng',
+        'address_line1',
+        'price_per_day',
+        'monthly_discount',
+        'approval_status',
+        'hidden',
+        'tags',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class,);
