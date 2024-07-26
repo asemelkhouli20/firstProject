@@ -4,7 +4,9 @@ use App\Models\Office;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\Tag;
+use App\Notifications\OfficePendingApproval;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Notification;
 
 test('test_offices_with_paggination_get_rout_api', function () {
     $response = $this->get('/api/offices');
@@ -105,6 +107,9 @@ test('test_offices_create_rout_api', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
     $tags = Tag::factory(2)->create();
+    Notification::fake();
+    $admin = User::factory()->create(['name' => 'Admin']);
+
     $response = $this->postJson('/api/offices', Office::factory()->raw([
         'tags' => $tags->pluck('id')->toArray(),
     ]));
@@ -112,6 +117,9 @@ test('test_offices_create_rout_api', function () {
         ->assertJsonPath('data.approval_status', Office::APPROVEL_PENDING)
         ->assertJsonPath('data.user.id', $user->id)
         ->assertJsonCount(2, 'data.tags');
+
+    Notification::assertSentTo($admin, OfficePendingApproval::class);
+
 });
 
 test('test_offices_create_not_allow_to_create_rout_api', function () {
@@ -132,7 +140,8 @@ test('test_offices_create_not_allow_to_create_rout_api', function () {
 test('test_offices_update_rout_api', function () {
     $user = User::factory()->create();
     $tags = Tag::factory(2)->create();
-    $office = Office::factory()->for($user)->create();
+    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+
     $office->tags()->attach($tags);
     $this->actingAs($user);
 
@@ -145,6 +154,7 @@ test('test_offices_update_rout_api', function () {
     $response->assertOk()
         ->assertJsonPath('data.title', 'updated')
         ->assertJsonPath('data.user.id', $user->id)
+        ->assertJsonPath('data.approval_status', Office::APPROVEL_APPROVED)
         ->assertJsonCount(2, 'data.tags')
         ->assertJsonPath('data.tags.0.id', $tags[0]->id)
         ->assertJsonPath('data.tags.1.id', $anotheTag->id);
@@ -160,6 +170,48 @@ test('test_offices_update_not_allow_for_his_not_office_user_rout_api', function 
     $response = $this->putJson('/api/offices/' . $office->id, [
         'title' => 'updated'
     ]);
-    // dd($response->json());
     $response->assertStatus(Response::HTTP_FORBIDDEN);
+});
+
+
+
+test('test_offices_update_change_approval_status_when_need_it_rout_api', function () {
+    $user = User::factory()->create();
+    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+    $this->actingAs($user);
+    Notification::fake();
+    $admin = User::factory()->create(['name' => 'Admin']);
+
+    $response = $this->putJson('/api/offices/' . $office->id, [
+        'title' => 'updated',
+        'lat' => 434
+    ]);
+    $response->assertOk()
+        ->assertJsonPath('data.title', 'updated')
+        ->assertJsonPath('data.user.id', $user->id)
+        ->assertJsonPath('data.approval_status', Office::APPROVEL_PENDING);
+    $this->assertDatabaseHas('offices', ['title' => 'updated']);
+    Notification::assertSentTo($admin, OfficePendingApproval::class);
+});
+
+
+test('test_offices_delete_rout_api', function () {
+    $user = User::factory()->create();
+    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+    $this->actingAs($user);
+
+    $response = $this->deleteJson('/api/offices/' . $office->id);
+    $response->assertOk();
+    $this->assertSoftDeleted($office);
+});
+
+test('test_offices_cannot_delete_when_is_reservation_rout_api', function () {
+    $user = User::factory()->create();
+    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+    Reservation::factory()->for($office)->create();
+    $this->actingAs($user);
+
+    $response = $this->deleteJson('/api/offices/' . $office->id);
+    $response->assertUnprocessable();
+    $this->assertNotSoftDeleted($office);
 });

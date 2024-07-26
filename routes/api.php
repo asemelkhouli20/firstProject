@@ -17,4 +17,5 @@ Route::get('/offices/{office}', [OfficeController::class, 'show']);
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/offices', [OfficeController::class, 'create']);
     Route::put('/offices/{office}', [OfficeController::class, 'update']);
+    Route::delete('/offices/{office}', [OfficeController::class, 'delete']);
 });

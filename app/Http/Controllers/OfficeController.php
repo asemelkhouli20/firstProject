@@ -6,9 +6,12 @@ use App\Http\Requests\StoreOfficeRequest;
 use App\Http\Resources\OfficeResource;
 use App\Models\Office;
 use App\Models\Reservation;
+use App\Models\User;
+use App\Notifications\OfficePendingApproval;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Notification;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -16,6 +19,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class OfficeController extends Controller
 {
@@ -58,7 +62,10 @@ class OfficeController extends Controller
             $office->tags()->sync($attributes['tags']);
         }
         DB::commit();
-
+        $admin = User::firstwhere('name', 'Admin');
+        if ($admin) {
+            Notification::send($admin, new OfficePendingApproval($office));
+        }
         return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
 
@@ -98,13 +105,24 @@ class OfficeController extends Controller
         //
         $this->authorize('update', $office);
         $attributes = OfficeController::vidateOffice($request, 'update');
+        $office->fill(Arr::except($attributes, ['tags']));
+
+        $requerReview = $office->isDirty(['lat', 'lng', 'address_line1', 'price_per_day', 'monthly_discount']);
+        if ($requerReview) {
+            $office->fill(['approval_status' => Office::APPROVEL_PENDING]);
+        }
         DB::beginTransaction();
-        $office->update(Arr::except($attributes, ['tags']));
-        if(isset($attributes['tags'])){
+        $office->save();
+        if (isset($attributes['tags'])) {
             $office->tags()->sync($attributes['tags']);
         }
-
         DB::commit();
+        if ($requerReview) {
+            $admin = User::firstwhere('name', 'Admin');
+            if ($admin) {
+                Notification::send($admin, new OfficePendingApproval($office));
+            }
+        }
 
         return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
@@ -112,9 +130,20 @@ class OfficeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Office $office)
+    public function delete(Office $office)
     {
         //
+        abort_unless(
+            auth()->user()->tokenCan('office.' . 'delete'),
+            Response::HTTP_FORBIDDEN
+        );
+        $this->authorize('delete', $office);
+
+        throw_if(
+            $office->reservations()->where('status', Reservation::STATUS_ACTIVE)->exists(),
+            ValidationException::withMessages(['office' => 'This office cannot be deleted because there are existing reservations associated with it.'])
+        );
+        $office->delete();
     }
 
     function vidateOffice(Request $request, string $metthod)
@@ -123,13 +152,14 @@ class OfficeController extends Controller
             auth()->user()->tokenCan('office.' . $metthod),
             Response::HTTP_FORBIDDEN
         );
-        $sometimes = Rule::when(($metthod == 'update'), 'sometimes') ;
-        $attributes = $request->validate([
-                'title'         => [$sometimes, 'required', 'string' ],
-                'description'   => [$sometimes, 'required', 'string' ],
+        $sometimes = Rule::when(($metthod == 'update'), 'sometimes');
+        $attributes = $request->validate(
+            [
+                'title'         => [$sometimes, 'required', 'string'],
+                'description'   => [$sometimes, 'required', 'string'],
                 'lat'           => [$sometimes, 'required', 'numeric'],
                 'lng'           => [$sometimes, 'required', 'numeric'],
-                'address_line1' => [$sometimes, 'required', 'string' ],
+                'address_line1' => [$sometimes, 'required', 'string'],
                 'price_per_day' => [$sometimes, 'required', 'integer', 'min:100'],
 
                 'hidden' => ['bool'],
