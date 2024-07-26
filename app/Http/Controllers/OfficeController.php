@@ -29,21 +29,27 @@ class OfficeController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        return OfficeResource::collection(
-            Office::query()
-                ->where('approval_status', Office::APPROVEL_APPROVED)
-                ->where('hidden', false)
-                ->when(request('user_id'), fn ($builder) => $builder->whereUserId(request('user_id')))
-                ->when(request('visitor_id'), fn (EloquentBuilder $builder) => $builder->whereRelation('reservations', 'user_id', '=', request('visitor_id')))
-                ->when(
-                    request('lat') && request('lng'),
-                    fn ($builder) => $builder->nearestTo($request->lat, $request->lng),
-                    fn ($builder) => $builder->orderBy('id', 'desc')
-                )
-                ->with(['tags', 'user', 'images'])
-                ->withCount(['reservations' => fn ($builder) => $builder->where('status', Reservation::STATUS_ACTIVE)])
-                ->paginate(20)
-        );
+        $query =  Office::query();
+        $isUserRequestHisOffice = request('user_id') && auth()->user() && (request('user_id') == auth()->id());
+        if (!$isUserRequestHisOffice) {
+            $query->where('approval_status', Office::APPROVEL_APPROVED)->where('hidden', false);
+        }
+        if (request('user_id')) {
+            $query->whereUserId(request('user_id'));
+        }
+        if (request('visitor_id')) {
+            $query->whereRelation('reservations', 'user_id', '=', request('visitor_id'));
+        }
+        if (request('lat') && request('lng')) {
+            $query->nearestTo($request->lat, $request->lng);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+        $query->with(['tags', 'user', 'images']);
+        $query->withCount(['reservations' => fn ($builder) => $builder->where('status', Reservation::STATUS_ACTIVE)]);
+
+        $office = $query->paginate(20);
+        return OfficeResource::collection($office);
     }
 
     /**
@@ -62,7 +68,7 @@ class OfficeController extends Controller
             $office->tags()->sync($attributes['tags']);
         }
         DB::commit();
-        $admin = User::firstwhere('name', 'Admin');
+        $admin = User::firstwhere('is_admin', true);
         if ($admin) {
             Notification::send($admin, new OfficePendingApproval($office));
         }
@@ -118,7 +124,7 @@ class OfficeController extends Controller
         }
         DB::commit();
         if ($requerReview) {
-            $admin = User::firstwhere('name', 'Admin');
+            $admin = User::firstwhere('is_admin', true);
             if ($admin) {
                 Notification::send($admin, new OfficePendingApproval($office));
             }

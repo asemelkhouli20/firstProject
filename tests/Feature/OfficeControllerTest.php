@@ -8,11 +8,27 @@ use App\Notifications\OfficePendingApproval;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Notification;
 
+use function Pest\Laravel\actingAs;
+
 test('test_offices_with_paggination_get_rout_api', function () {
     $response = $this->get('/api/offices');
     $response->assertOk();
     $this->assertNotNull($response->json('meta'));
     $this->assertNotNull($response->json('data'));
+});
+
+test('test_offices_countent_hidden_or_APPROVEL_APPROVED_for_the_user_who_fillter_wiht_it_log_in_get_rout_api', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Office::factory(3)->for($user)->create();
+    Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_PENDING]);
+    Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
+    Office::factory()->for($user)->create(['hidden' => true]);
+
+    $response = $this->get('/api/offices?user_id='. $user->id);
+    $response->assertOk()
+        ->assertJsonCount(6, 'data');
 });
 
 test('test_offices_does_not_countent_hidden_or_APPROVEL_APPROVED_get_rout_api', function () {
@@ -108,7 +124,7 @@ test('test_offices_create_rout_api', function () {
     $this->actingAs($user);
     $tags = Tag::factory(2)->create();
     Notification::fake();
-    $admin = User::factory()->create(['name' => 'Admin']);
+    $admin = User::factory()->create(['is_admin' => true]);
 
     $response = $this->postJson('/api/offices', Office::factory()->raw([
         'tags' => $tags->pluck('id')->toArray(),
@@ -119,7 +135,6 @@ test('test_offices_create_rout_api', function () {
         ->assertJsonCount(2, 'data.tags');
 
     Notification::assertSentTo($admin, OfficePendingApproval::class);
-
 });
 
 test('test_offices_create_not_allow_to_create_rout_api', function () {
@@ -180,7 +195,7 @@ test('test_offices_update_change_approval_status_when_need_it_rout_api', functio
     $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
     $this->actingAs($user);
     Notification::fake();
-    $admin = User::factory()->create(['name' => 'Admin']);
+    $admin = User::factory()->create(['is_admin' => true]);
 
     $response = $this->putJson('/api/offices/' . $office->id, [
         'title' => 'updated',
