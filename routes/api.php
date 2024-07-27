@@ -21,5 +21,6 @@ Route::prefix('offices')->group(function () {
         Route::put('/{office}', [OfficeController::class, 'update']);
         Route::delete('/{office}', [OfficeController::class, 'delete']);
         Route::post('/{office}/images', [OfficeImageController::class, 'store']);
+        Route::delete('/{office}/images/{image}', [OfficeImageController::class, 'delete']);
     });
 });

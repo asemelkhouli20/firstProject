@@ -26,7 +26,7 @@ test('test_offices_countent_hidden_or_APPROVEL_APPROVED_for_the_user_who_fillter
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
     Office::factory()->for($user)->create(['hidden' => true]);
 
-    $response = $this->get('/api/offices?user_id='. $user->id);
+    $response = $this->get('/api/offices?user_id=' . $user->id);
     $response->assertOk()
         ->assertJsonCount(6, 'data');
 });
@@ -49,7 +49,7 @@ test('test_offices_with_fillter_by_userID_does_not_countent_hidden_or_APPROVEL_A
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_PENDING]);
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
     Office::factory()->for($user)->create(['hidden' => true]);
-    $response = $this->get('/api/offices?user_id='.$user->id);
+    $response = $this->get('/api/offices?user_id=' . $user->id);
 
     foreach ($response->json('data') as $office) {
         $this->assertEquals(Office::APPROVEL_APPROVED, $office['approval_status']);
@@ -188,6 +188,38 @@ test('test_offices_update_rout_api', function () {
         ->assertJsonPath('data.tags.0.id', $tags[0]->id)
         ->assertJsonPath('data.tags.1.id', $anotheTag->id);
     $this->assertDatabaseHas('offices', ['title' => 'updated']);
+});
+test('test_offices_update_the_feature_image_rout_api', function () {
+    $user = User::factory()->create();
+    $office = Office::factory()->for($user)->create();
+    $image = $office->images()->create([
+        'path' => 'image.jpg'
+    ]);
+    $this->actingAs($user);
+
+    $response = $this->putJson('/api/offices/' . $office->id, [
+        'featured_image_id' => $image->id,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.featured_image_id', $image->id)
+        ->assertJsonPath('data.user.id', $user->id);
+});
+test('test_offices_doesnpt_update_the_feature_image_for_other_office_rout_api', function () {
+    $user = User::factory()->create();
+    $office = Office::factory()->for($user)->create();
+    $image = $office->images()->create([
+        'path' => 'image.jpg'
+    ]);
+    $office2 = Office::factory()->for($user)->create();
+
+    $this->actingAs($user);
+
+    $response = $this->putJson('/api/offices/' . $office2->id, [
+        'featured_image_id' => $image->id,
+    ]);
+
+    $response->assertUnprocessable()->assertInvalid('featured_image_id');
 });
 
 test('test_offices_update_not_allow_for_his_not_office_user_rout_api', function () {

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ImageResource;
+use App\Models\Image;
 use App\Models\Office;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class OfficeImageController extends Controller
 {
@@ -33,7 +35,7 @@ class OfficeImageController extends Controller
         $this->authorize('update', $office);
 
         $request->validate([
-            'image' => ['file', 'max:5000', 'mimes:png,jpg']
+            'image' => ['file', 'max:2048', 'mimes:png,jpg']
         ]);
         $path = $request->file('image')->storePublicly('/', ['disk' => 'public']);
 
@@ -63,8 +65,30 @@ class OfficeImageController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function delete(Office $office, Image $image)
     {
         //
+        abort_unless(
+            auth()->user()->tokenCan('office.' . 'update'),
+            Response::HTTP_FORBIDDEN
+        );
+        $this->authorize('update', $office);
+        throw_if(
+            $office->images()->count() == 1,
+            ValidationException::withMessages(['only_image' => 'Cannot delete the only image'])
+        );
+        throw_if(
+             ($image->resource_type != 'office') || ($image->resource_id != $office->id),
+            ValidationException::withMessages(['image' => 'Cannot delete this image because it is not for this office'])
+        );
+        throw_if(
+            $office->featured_image_id == $image->id,
+            ValidationException::withMessages(['featured_image' => 'Cannot delete the featured image'])
+        );
+        Storage::disk('public')->delete($image->path);
+        $image->delete();
+
+        return response()->json(['message' => 'Image deleted successfully']);
+
     }
 }

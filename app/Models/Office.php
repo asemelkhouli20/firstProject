@@ -39,6 +39,7 @@ class Office extends Model
         'monthly_discount',
         'approval_status',
         'hidden',
+        'featured_image_id',
         'tags',
     ];
 
