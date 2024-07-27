@@ -8,17 +8,17 @@ use App\Models\Office;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\OfficePendingApproval;
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Notification;
+use App\Http\Validators\OfficeValidator;
+
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OfficeController extends Controller
@@ -30,21 +30,24 @@ class OfficeController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query =  Office::query();
-        $isUserRequestHisOffice = request('user_id') && auth()->user() && (request('user_id') == auth()->id());
+        $userId = request('user_id');
+        $isUserRequestHisOffice = $userId && ($userId == auth()->id());
         if (!$isUserRequestHisOffice) {
-            $query->where('approval_status', Office::APPROVEL_APPROVED)->where('hidden', false);
+            $query->where('approval_status', Office::APPROVEL_APPROVED);
+            $query->where('hidden', false);
         }
-        if (request('user_id')) {
-            $query->whereUserId(request('user_id'));
+        if ($userId) {
+            $query->whereUserId($userId);
         }
-        if (request('visitor_id')) {
-            $query->whereRelation('reservations', 'user_id', '=', request('visitor_id'));
+        if ($visitorID = request('visitor_id')) {
+            $query->whereRelation('reservations', 'user_id', '=', $visitorID);
         }
-        if (request('lat') && request('lng')) {
-            $query->nearestTo($request->lat, $request->lng);
+        if ($lat = request('lat') && $lng = request('lng')) {
+            $query->nearestTo($lat, $lng);
         } else {
             $query->orderBy('id', 'desc');
         }
+
         $query->with(['tags', 'user', 'images']);
         $query->withCount(['reservations' => fn ($builder) => $builder->where('status', Reservation::STATUS_ACTIVE)]);
 
@@ -58,7 +61,11 @@ class OfficeController extends Controller
     public function create(Request $request): JsonResource
     {
         //
-        $attributes = OfficeController::vidateOffice($request, 'create');
+        abort_unless(
+            auth()->user()->tokenCan('office.create'),
+            Response::HTTP_FORBIDDEN
+        );
+        $attributes = OfficeValidator::validate($request);
         $attributes['approval_status'] = Office::APPROVEL_PENDING;
         DB::beginTransaction();
         $office = Office::Create(
@@ -68,10 +75,7 @@ class OfficeController extends Controller
             $office->tags()->sync($attributes['tags']);
         }
         DB::commit();
-        $admin = User::firstwhere('is_admin', true);
-        if ($admin) {
-            Notification::send($admin, new OfficePendingApproval($office));
-        }
+        $this->notfiyAdmin($office);
         return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
 
@@ -109,8 +113,12 @@ class OfficeController extends Controller
     public function update(Request $request, Office $office)
     {
         //
+        abort_unless(
+            auth()->user()->tokenCan('office.update'),
+            Response::HTTP_FORBIDDEN
+        );
         $this->authorize('update', $office);
-        $attributes = OfficeController::vidateOffice($request, 'update');
+        $attributes = OfficeValidator::validate($request, $office->id);
         $office->fill(Arr::except($attributes, ['tags']));
 
         $requerReview = $office->isDirty(['lat', 'lng', 'address_line1', 'price_per_day', 'monthly_discount']);
@@ -124,10 +132,7 @@ class OfficeController extends Controller
         }
         DB::commit();
         if ($requerReview) {
-            $admin = User::firstwhere('is_admin', true);
-            if ($admin) {
-                Notification::send($admin, new OfficePendingApproval($office));
-            }
+            $this->notfiyAdmin($office);
         }
 
         return OfficeResource::make($office->load(['user', 'tags', 'images']));
@@ -152,30 +157,12 @@ class OfficeController extends Controller
         $office->delete();
     }
 
-    function vidateOffice(Request $request, string $metthod)
+
+    function notfiyAdmin(Office $office)
     {
-        abort_unless(
-            auth()->user()->tokenCan('office.' . $metthod),
-            Response::HTTP_FORBIDDEN
-        );
-        $sometimes = Rule::when(($metthod == 'update'), 'sometimes');
-        $attributes = $request->validate(
-            [
-                'title'         => [$sometimes, 'required', 'string'],
-                'description'   => [$sometimes, 'required', 'string'],
-                'lat'           => [$sometimes, 'required', 'numeric'],
-                'lng'           => [$sometimes, 'required', 'numeric'],
-                'address_line1' => [$sometimes, 'required', 'string'],
-                'price_per_day' => [$sometimes, 'required', 'integer', 'min:100'],
-
-                'hidden' => ['bool'],
-                'monthly_discount' => ['integer', 'min:0'],
-
-                'tags' => ['array'],
-                'tags.*' => ['integer', Rule::exists('tags', 'id')],
-            ]
-        );
-        $attributes['user_id'] = auth()->id();
-        return $attributes;
+        $admin = User::firstwhere('is_admin', true);
+        if ($admin) {
+            Notification::send($admin, new OfficePendingApproval($office));
+        }
     }
 }

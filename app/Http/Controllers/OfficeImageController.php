@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ImageResource;
 use App\Models\Office;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 
 class OfficeImageController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -19,9 +23,15 @@ class OfficeImageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request,Office $office)
+    public function store(Request $request, Office $office)
     {
         //
+        abort_unless(
+            auth()->user()->tokenCan('office.' . 'update'),
+            Response::HTTP_FORBIDDEN
+        );
+        $this->authorize('update', $office);
+
         $request->validate([
             'image' => ['file', 'max:5000', 'mimes:png,jpg']
         ]);

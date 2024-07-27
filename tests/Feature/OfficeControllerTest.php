@@ -43,6 +43,20 @@ test('test_offices_does_not_countent_hidden_or_APPROVEL_APPROVED_get_rout_api', 
     }
 });
 
+test('test_offices_with_fillter_by_userID_does_not_countent_hidden_or_APPROVEL_APPROVED_get_rout_api', function () {
+    $user = User::factory()->create();
+    Office::factory(3)->for($user)->create();
+    Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_PENDING]);
+    Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
+    Office::factory()->for($user)->create(['hidden' => true]);
+    $response = $this->get('/api/offices?user_id='.$user->id);
+
+    foreach ($response->json('data') as $office) {
+        $this->assertEquals(Office::APPROVEL_APPROVED, $office['approval_status']);
+        $this->assertEquals(false, $office['hidden']);
+    }
+});
+
 test('test_offices_with_fillter_by_userID_get_rout_api', function () {
     $houst = User::factory()->create();
     $office = Office::factory()->for($houst)->create();

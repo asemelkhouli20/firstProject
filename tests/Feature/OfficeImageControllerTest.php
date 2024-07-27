@@ -5,7 +5,7 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-test('example', function () {
+test('upload_image_and_store', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
     Storage::fake('public');
