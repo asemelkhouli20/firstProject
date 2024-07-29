@@ -77,10 +77,7 @@ class OfficeImageController extends Controller
             $office->images()->count() == 1,
             ValidationException::withMessages(['only_image' => 'Cannot delete the only image'])
         );
-        throw_if(
-             ($image->resource_type != 'office') || ($image->resource_id != $office->id),
-            ValidationException::withMessages(['image' => 'Cannot delete this image because it is not for this office'])
-        );
+
         throw_if(
             $office->featured_image_id == $image->id,
             ValidationException::withMessages(['featured_image' => 'Cannot delete the featured image'])

@@ -13,6 +13,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Notification;
 use App\Http\Validators\OfficeValidator;
 
+use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -154,6 +155,11 @@ class OfficeController extends Controller
             $office->reservations()->where('status', Reservation::STATUS_ACTIVE)->exists(),
             ValidationException::withMessages(['office' => 'This office cannot be deleted because there are existing reservations associated with it.'])
         );
+        $office->images()->each(function($image){
+            Storage::disk('public')->delete($image->path);
+
+            $image->delete();
+        });
         $office->delete();
     }
 

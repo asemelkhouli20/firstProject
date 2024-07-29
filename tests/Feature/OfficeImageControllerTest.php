@@ -82,12 +82,10 @@ test('it_doesnot_delete_image_for_another_office', function () {
     $office2 = Office::factory()->for($user)->create();
     $image = $office->images()->create(['path' => 'image.jpg']);
 
-
     $office->images()->create(['path' => 'image2.jpg']);
 
     $response = $this->deleteJson("/api/offices/{$office2->id}/images/{$image->id}");
 
-    $response->assertUnprocessable();
+    $response->assertNotFound();
     $this->assertModelExists($image);
-    $response->assertJsonValidationErrors(['image']);
 });

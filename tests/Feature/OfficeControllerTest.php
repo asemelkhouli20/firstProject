@@ -7,6 +7,7 @@ use App\Models\Tag;
 use App\Notifications\OfficePendingApproval;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
 
@@ -258,17 +259,24 @@ test('test_offices_update_change_approval_status_when_need_it_rout_api', functio
 
 test('test_offices_delete_rout_api', function () {
     $user = User::factory()->create();
-    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+    $office = Office::factory()->for($user)->create();
+    Storage::fake('public');
+
+    $image = $office->images()->create([
+        'path' => 'image.jpg'
+    ]);
     $this->actingAs($user);
 
     $response = $this->deleteJson('/api/offices/' . $office->id);
     $response->assertOk();
     $this->assertSoftDeleted($office);
+    $this->assertModelMissing($image);
+    Storage::disk('public')->assertMissing('image.jpg');
 });
 
 test('test_offices_cannot_delete_when_is_reservation_rout_api', function () {
     $user = User::factory()->create();
-    $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
+    $office = Office::factory()->for($user)->create();
     Reservation::factory()->for($office)->create();
     $this->actingAs($user);
 
