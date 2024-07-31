@@ -10,7 +10,8 @@ class Tag extends Model
 {
     use HasFactory;
 
-    public function Office():BelongsToMany{
-        return $this->belongsToMany( Office::class, 'offices_tags');
+    public function Office(): BelongsToMany
+    {
+        return $this->belongsToMany(Office::class, 'offices_tags');
     }
 }

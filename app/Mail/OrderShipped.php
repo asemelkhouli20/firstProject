@@ -2,10 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Team;
-use App\Models\Ind;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -38,7 +35,6 @@ class OrderShipped extends Mailable
      */
     public function content(): Content
     {
-
 
         return new Content(
             markdown: 'emails.team-invitation-dev'

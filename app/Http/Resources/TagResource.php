@@ -19,9 +19,9 @@ class TagResource extends JsonResource
             $this->merge(
                 Arr::only(
                     $this->resource->toArray(),
-                    ["id", "name"]
+                    ['id', 'name']
                 )
-            )
+            ),
         ];
     }
 }

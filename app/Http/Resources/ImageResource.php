@@ -19,9 +19,9 @@ class ImageResource extends JsonResource
             $this->merge(
                 Arr::only(
                     $this->resource->toArray(),
-                    ["id", "path"]
+                    ['id', 'path']
                 )
-            )
+            ),
         ];
     }
 }

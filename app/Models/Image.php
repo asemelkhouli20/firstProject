@@ -12,7 +12,8 @@ class Image extends Model
 
     protected $fillable = ['path'];
 
-    public function resource():MorphTo{
+    public function resource(): MorphTo
+    {
         return $this->morphTo();
     }
 }

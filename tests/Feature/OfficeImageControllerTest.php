@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 
 test('upload_image_and_store', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
     Storage::fake('public');
 
     $office = Office::factory()->for($user)->create();
@@ -25,7 +25,7 @@ test('upload_image_and_store', function () {
 
 test('delete_image', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
     Storage::fake('public');
     $file = UploadedFile::fake()->image('uploaded_image.jpg');
     $filePath = $file->store('images', 'public');
@@ -44,7 +44,7 @@ test('delete_image', function () {
 
 test('it_doesnot_delete_the_only_image', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
     $office = Office::factory()->for($user)->create();
     $image = $office->images()->create(['path' => 'image.jpg']);
@@ -58,11 +58,10 @@ test('it_doesnot_delete_the_only_image', function () {
 
 test('it_doesnot_delete_the_feature_image', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
     $office = Office::factory()->for($user)->create();
     $image = $office->images()->create(['path' => 'image.jpg']);
-
 
     $office->update(['featured_image_id' => $image->id]);
     $office->images()->create(['path' => 'image2.jpg']);
@@ -76,7 +75,7 @@ test('it_doesnot_delete_the_feature_image', function () {
 
 test('it_doesnot_delete_image_for_another_office', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
     $office = Office::factory()->for($user)->create();
     $office2 = Office::factory()->for($user)->create();

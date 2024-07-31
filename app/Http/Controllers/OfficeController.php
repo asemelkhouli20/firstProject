@@ -4,36 +4,35 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOfficeRequest;
 use App\Http\Resources\OfficeResource;
+use App\Http\Validators\OfficeValidator;
 use App\Models\Office;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\OfficePendingApproval;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Notification;
-use App\Http\Validators\OfficeValidator;
-
-use Illuminate\Support\Facades\Storage;
-
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class OfficeController extends Controller
 {
     use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
-        $query =  Office::query();
+        $query = Office::query();
         $userId = request('user_id');
-        $isUserRequestHisOffice = $userId && ($userId == auth()->id());
-        if (!$isUserRequestHisOffice) {
+        $isUserRequestHisOffice = $userId && ($userId == auth('sanctum')->id());
+        if (! $isUserRequestHisOffice) {
             $query->where('approval_status', Office::APPROVEL_APPROVED);
             $query->where('hidden', false);
         }
@@ -53,6 +52,7 @@ class OfficeController extends Controller
         $query->withCount(['reservations' => fn ($builder) => $builder->where('status', Reservation::STATUS_ACTIVE)]);
 
         $office = $query->paginate(20);
+
         return OfficeResource::collection($office);
     }
 
@@ -77,6 +77,7 @@ class OfficeController extends Controller
         }
         DB::commit();
         $this->notfiyAdmin($office);
+
         return OfficeResource::make($office->load(['user', 'tags', 'images']));
     }
 
@@ -97,6 +98,7 @@ class OfficeController extends Controller
         $office
             ->loadCount(['reservations' => fn ($builder) => $builder->where('status', Reservation::STATUS_ACTIVE)])
             ->load(['tags', 'user', 'images']);
+
         return OfficeResource::make($office);
     }
 
@@ -146,7 +148,7 @@ class OfficeController extends Controller
     {
         //
         abort_unless(
-            auth()->user()->tokenCan('office.' . 'delete'),
+            auth()->user()->tokenCan('office.'.'delete'),
             Response::HTTP_FORBIDDEN
         );
         $this->authorize('delete', $office);
@@ -155,7 +157,7 @@ class OfficeController extends Controller
             $office->reservations()->where('status', Reservation::STATUS_ACTIVE)->exists(),
             ValidationException::withMessages(['office' => 'This office cannot be deleted because there are existing reservations associated with it.'])
         );
-        $office->images()->each(function($image){
+        $office->images()->each(function ($image) {
             Storage::disk('public')->delete($image->path);
 
             $image->delete();
@@ -163,8 +165,7 @@ class OfficeController extends Controller
         $office->delete();
     }
 
-
-    function notfiyAdmin(Office $office)
+    public function notfiyAdmin(Office $office)
     {
         $admin = User::firstwhere('is_admin', true);
         if ($admin) {

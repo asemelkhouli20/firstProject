@@ -2,14 +2,12 @@
 
 use App\Models\Office;
 use App\Models\Reservation;
-use App\Models\User;
 use App\Models\Tag;
+use App\Models\User;
 use App\Notifications\OfficePendingApproval;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
-
-use function Pest\Laravel\actingAs;
 
 test('test_offices_with_paggination_get_rout_api', function () {
     $response = $this->get('/api/offices');
@@ -20,14 +18,14 @@ test('test_offices_with_paggination_get_rout_api', function () {
 
 test('test_offices_countent_hidden_or_APPROVEL_APPROVED_for_the_user_who_fillter_wiht_it_log_in_get_rout_api', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
     Office::factory(3)->for($user)->create();
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_PENDING]);
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
     Office::factory()->for($user)->create(['hidden' => true]);
 
-    $response = $this->get('/api/offices?user_id=' . $user->id);
+    $response = $this->get('/api/offices?user_id='.$user->id);
     $response->assertOk()
         ->assertJsonCount(6, 'data');
 });
@@ -50,7 +48,7 @@ test('test_offices_with_fillter_by_userID_does_not_countent_hidden_or_APPROVEL_A
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_PENDING]);
     Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_REJECTED]);
     Office::factory()->for($user)->create(['hidden' => true]);
-    $response = $this->get('/api/offices?user_id=' . $user->id);
+    $response = $this->get('/api/offices?user_id='.$user->id);
 
     foreach ($response->json('data') as $office) {
         $this->assertEquals(Office::APPROVEL_APPROVED, $office['approval_status']);
@@ -61,7 +59,7 @@ test('test_offices_with_fillter_by_userID_does_not_countent_hidden_or_APPROVEL_A
 test('test_offices_with_fillter_by_userID_get_rout_api', function () {
     $houst = User::factory()->create();
     $office = Office::factory()->for($houst)->create();
-    $response = $this->get('/api/offices?user_id=' . $houst->id);
+    $response = $this->get('/api/offices?user_id='.$houst->id);
     $response->assertOk();
     $response->assertJsonCount(1, 'data');
     $this->assertEquals($office->id, $response->json('data')[0]['id']);
@@ -73,7 +71,7 @@ test('test_offices_with_fillter_by_userID_for_reservation_get_rout_api', functio
     Reservation::factory()->for($office)->for($user)->create();
     Reservation::factory()->for(Office::factory())->for(User::factory())->create();
 
-    $response = $this->get('/api/offices?visitor_id=' . $user->id);
+    $response = $this->get('/api/offices?visitor_id='.$user->id);
     $response->assertOk();
     $response->assertJsonCount(1, 'data');
     $this->assertEquals($office->id, $response->json('data')[0]['id']);
@@ -100,7 +98,7 @@ test('test_offices_show_rout_api', function () {
     $office->tags()->attach($tag);
     $office->images()->create(['path' => 'image.png']);
 
-    $response = $this->get('/api/offices/' . $office->id);
+    $response = $this->get('/api/offices/'.$office->id);
     $response->assertOk();
     $this->assertEquals($office->id, $response->json('data')['id']);
     $this->assertNotNull($response->json('data')['user']);
@@ -108,7 +106,6 @@ test('test_offices_show_rout_api', function () {
     $this->assertNotNull($response->json('data')['tags'][0]);
     $this->assertNotNull($response->json('data')['images'][0]);
 });
-
 
 test('test_offices_with_more_near_office_get_rout_api', function () {
     $officeVista = Office::factory()->create([
@@ -136,7 +133,7 @@ test('test_offices_with_more_near_office_get_rout_api', function () {
 
 test('test_offices_create_rout_api', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
     $tags = Tag::factory(2)->create();
     Notification::fake();
     $admin = User::factory()->create(['is_admin' => true]);
@@ -160,7 +157,7 @@ test('test_offices_create_not_allow_to_create_rout_api', function () {
         '/api/offices',
         [],
         [
-            'Authorization' => 'Bearer ' . $token->plainTextToken
+            'Authorization' => 'Bearer '.$token->plainTextToken,
         ]
     );
     $response->assertStatus(Response::HTTP_FORBIDDEN);
@@ -173,12 +170,12 @@ test('test_offices_update_rout_api', function () {
     $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
 
     $office->tags()->attach($tags);
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
     $anotheTag = Tag::factory()->create();
-    $response = $this->putJson('/api/offices/' . $office->id, [
+    $response = $this->putJson('/api/offices/'.$office->id, [
         'title' => 'updated',
-        'tags' => [$tags[0]->id, $anotheTag->id]
+        'tags' => [$tags[0]->id, $anotheTag->id],
     ]);
     // dd($response->json());
     $response->assertOk()
@@ -194,11 +191,11 @@ test('test_offices_update_the_feature_image_rout_api', function () {
     $user = User::factory()->create();
     $office = Office::factory()->for($user)->create();
     $image = $office->images()->create([
-        'path' => 'image.jpg'
+        'path' => 'image.jpg',
     ]);
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
-    $response = $this->putJson('/api/offices/' . $office->id, [
+    $response = $this->putJson('/api/offices/'.$office->id, [
         'featured_image_id' => $image->id,
     ]);
 
@@ -210,13 +207,13 @@ test('test_offices_doesnpt_update_the_feature_image_for_other_office_rout_api', 
     $user = User::factory()->create();
     $office = Office::factory()->for($user)->create();
     $image = $office->images()->create([
-        'path' => 'image.jpg'
+        'path' => 'image.jpg',
     ]);
     $office2 = Office::factory()->for($user)->create();
 
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
-    $response = $this->putJson('/api/offices/' . $office2->id, [
+    $response = $this->putJson('/api/offices/'.$office2->id, [
         'featured_image_id' => $image->id,
     ]);
 
@@ -227,26 +224,24 @@ test('test_offices_update_not_allow_for_his_not_office_user_rout_api', function 
     $user = User::factory()->create();
     $office = Office::factory()->for(User::factory()->create())->create();
 
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
-    $response = $this->putJson('/api/offices/' . $office->id, [
-        'title' => 'updated'
+    $response = $this->putJson('/api/offices/'.$office->id, [
+        'title' => 'updated',
     ]);
     $response->assertStatus(Response::HTTP_FORBIDDEN);
 });
 
-
-
 test('test_offices_update_change_approval_status_when_need_it_rout_api', function () {
     $user = User::factory()->create();
     $office = Office::factory()->for($user)->create(['approval_status' => Office::APPROVEL_APPROVED]);
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
     Notification::fake();
     $admin = User::factory()->create(['is_admin' => true]);
 
-    $response = $this->putJson('/api/offices/' . $office->id, [
+    $response = $this->putJson('/api/offices/'.$office->id, [
         'title' => 'updated',
-        'lat' => 434
+        'lat' => 434,
     ]);
     $response->assertOk()
         ->assertJsonPath('data.title', 'updated')
@@ -256,18 +251,17 @@ test('test_offices_update_change_approval_status_when_need_it_rout_api', functio
     Notification::assertSentTo($admin, OfficePendingApproval::class);
 });
 
-
 test('test_offices_delete_rout_api', function () {
     $user = User::factory()->create();
     $office = Office::factory()->for($user)->create();
     Storage::fake('public');
 
     $image = $office->images()->create([
-        'path' => 'image.jpg'
+        'path' => 'image.jpg',
     ]);
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
-    $response = $this->deleteJson('/api/offices/' . $office->id);
+    $response = $this->deleteJson('/api/offices/'.$office->id);
     $response->assertOk();
     $this->assertSoftDeleted($office);
     $this->assertModelMissing($image);
@@ -278,9 +272,9 @@ test('test_offices_cannot_delete_when_is_reservation_rout_api', function () {
     $user = User::factory()->create();
     $office = Office::factory()->for($user)->create();
     Reservation::factory()->for($office)->create();
-    $this->actingAs($user);
+    $this->actingSanctumAs($user);
 
-    $response = $this->deleteJson('/api/offices/' . $office->id);
+    $response = $this->deleteJson('/api/offices/'.$office->id);
     $response->assertUnprocessable();
     $this->assertNotSoftDeleted($office);
 });

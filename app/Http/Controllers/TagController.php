@@ -15,6 +15,7 @@ class TagController extends Controller
             Tag::all()
         );
     }
+
     /**
      * Display a listing of the resource.
      */

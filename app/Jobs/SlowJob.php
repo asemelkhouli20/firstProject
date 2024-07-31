@@ -27,6 +27,6 @@ class SlowJob implements ShouldQueue
     {
         //
         sleep(5);
-        echo("test");
+        echo 'test';
     }
 }

@@ -19,9 +19,9 @@ class UserResource extends JsonResource
             $this->merge(
                 Arr::only(
                     $this->resource->toArray(),
-                    ["id", "name", "profile_photo_url"]
+                    ['id', 'name', 'profile_photo_url']
                 )
-            )
+            ),
         ];
     }
 }

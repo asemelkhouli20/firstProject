@@ -20,7 +20,7 @@ class OfficeFactory extends Factory
     {
         return [
             'user_id' => User::inRandomOrder()->first()->id ?? User::factory(), // Get a random user or create a new one if none exist
-            'title' => fake()->words(3,true),
+            'title' => fake()->words(3, true),
             'description' => fake()->paragraph,
             'lat' => fake()->latitude,
             'lng' => fake()->longitude,
@@ -28,7 +28,7 @@ class OfficeFactory extends Factory
             'approval_status' => Office::APPROVEL_APPROVED,
             'hidden' => false,
             'price_per_day' => fake()->numberBetween(10_000, 20_000),
-            'monthly_discount' => 0
+            'monthly_discount' => 0,
         ];
     }
 }

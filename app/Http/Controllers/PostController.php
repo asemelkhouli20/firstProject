@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class PostController extends Controller
     {
         //
         $posts = Post::all();
+
         return view('posts.index', ['posts' => $posts]);
     }
 
@@ -39,10 +41,11 @@ class PostController extends Controller
             'content' => 'required|string|max:255',
             'user_id' => 'required|exists:users,id', // Ensure user_id exists in the users table
         ]);
-        $post = new Post();
+        $post = new Post;
         $post->content = $request->input('content');
         $post->user_id = $request->input('user_id');
         $post->save();
+
         return redirect()->route('posts.index')->with('success', 'Post created successfully!');
 
     }
@@ -63,13 +66,14 @@ class PostController extends Controller
     {
         //
         $users = User::all(); // Retrieve all users
+
         return view('posts.edit', compact('post', 'users'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request$request, Post $post)
+    public function update(Request $request, Post $post)
     {
         //
         $request->validate([

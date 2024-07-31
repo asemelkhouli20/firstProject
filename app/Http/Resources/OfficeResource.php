@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
@@ -19,14 +18,14 @@ class OfficeResource extends JsonResource
 
         return [
             'user' => UserResource::make($this->user),
-            'images'=> ImageResource::collection($this->images),
-            'tags'=> TagResource::collection($this->tags),
+            'images' => ImageResource::collection($this->images),
+            'tags' => TagResource::collection($this->tags),
             $this->merge(
                 Arr::except(
                     $this->resource->toArray(),
-                    ["user_id", "created_at", "updated_at", "deleted_at"]
+                    ['user_id', 'created_at', 'updated_at', 'deleted_at']
                 )
-            )
+            ),
 
         ];
     }
