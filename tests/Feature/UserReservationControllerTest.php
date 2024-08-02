@@ -104,7 +104,7 @@ test('filters_reservations_by_date_range', function () {
         'to_date' => $to_date,
     ]));
 
-    $response->assertOk()->dump()
+    $response->assertOk()
         ->assertJsonCount(4, 'data');
     // Test for invalid dates (no matching records)
     $response = $this->getJson('/api/reservations?'.http_build_query([

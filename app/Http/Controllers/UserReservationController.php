@@ -7,9 +7,9 @@ use App\Http\Requests\UpdateReservationRequest;
 use App\Http\Resources\ReservationResource;
 use App\Models\Office;
 use App\Models\Reservation;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class UserReservationController extends Controller
@@ -21,7 +21,7 @@ class UserReservationController extends Controller
     {
         //
         abort_unless(
-            auth()->user()->tokenCan('reservation.' . 'show'),
+            auth()->user()->tokenCan('reservation.'.'show'),
             Response::HTTP_FORBIDDEN
         );
         /** @var \Illuminate\Database\Eloquent\Builder $query */
@@ -40,20 +40,27 @@ class UserReservationController extends Controller
     public function create()
     {
         abort_unless(
-            auth()->user()->tokenCan('reservation.' . 'create'),
+            auth()->user()->tokenCan('reservation.'.'create'),
             Response::HTTP_FORBIDDEN
         );
         $request = request()->validate([
             'office_id' => ['required', 'integer'],
-            'start_date' => ['required', 'date:Y-m-d'],
-            'end_date' => ['required', 'date:Y-m-d'],
+            'start_date' => ['required', 'date:Y-m-d', 'after:'.now()->addDay()->toDateString()],
+            'end_date' => ['required', 'date:Y-m-d', 'after:start_date'],
         ]);
-        try {
-            /** @var \App\Models\Office $office */
-            $office = Office::findOrFail($request('office_id'), ['office_id']);
-        } catch (ModelNotFoundException $e) {
-            throw ValidationException::withMessages(['office_id' => 'Invailed Office ID']);
-        }
+        /** @var \App\Models\Office $office */
+        $office = Office::findOr($request('office_id'), ['office_id'], fn () => throw ValidationException::withMessages(['office_id' => 'Invailed Office ID']));
+        throw_if(
+            $office->user_id == auth()->id(),
+            ValidationException::withMessages(['office' => 'you cannot make reservation on your own office'])
+        );
+        throw_if(
+            $office->reservations()->activeBetween()->excists(),
+            ValidationException::withMessages(['office' => 'you cannot make reservation on this time'])
+        );
+
+        Cache::lock('reservations_office_'.$office->id, 10)->block(3, function () {});
+
     }
 
     /**

@@ -14,6 +14,47 @@ class Reservation extends Model
 
     /**
      * Scope a query to only include
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActiveBetween($query)
+    {
+        $query->whereStatus(Reservation::STATUS_ACTIVE);
+        $query->betweenDate(request('start_date'), request('end_date'));
+
+        return $query;
+    }
+
+    /**
+     * Scope a query to only include
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $from
+     * @param  string  $to
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeBetweenDate($query, $from, $to)
+    {
+        $query->where(function ($query) use ($from, $to) {
+            $query->whereBetween('start_date', [$from, $to]);
+            $query->orWhereBetween('end_date', [$from, $to]);
+            $query->orWhere(function ($query) use ($from, $to) {
+                $query->where('start_date', '<', $from);
+                $query->where('end_date', '>', $to);
+
+                return $query;
+            });
+
+            return $query;
+        });
+
+        // dd($query->toSql());
+        return $query;
+    }
+
+    /**
+     * Scope a query to only include
      */
     public function scopeFilter(Builder $query): Builder
     {
@@ -22,23 +63,11 @@ class Reservation extends Model
         }
 
         if ($status = self::STATUS(Request()->status)) {
-            $query->where('status', $status);
+            $query->whereStatus($status);
         }
 
         if (($from = Request()->from_date) && ($to = Request()->to_date)) {
-            $query->where(function ($query) use ($from, $to) {
-                $query->whereBetween('start_date', [$from, $to]);
-                $query->orWhereBetween('end_date', [$from, $to]);
-                $query->orWhere(function ($query) use ($from, $to) {
-                    $query->where('start_date', '<', $from);
-                    $query->where('end_date', '>', $to);
-
-                    return $query;
-                });
-
-                return $query;
-            });
-            // dd($query->toSql());
+            $query->betweenDate($from, $to);
         }
 
         return $query;
