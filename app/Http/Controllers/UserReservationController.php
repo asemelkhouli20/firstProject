@@ -43,24 +43,35 @@ class UserReservationController extends Controller
             auth()->user()->tokenCan('reservation.'.'create'),
             Response::HTTP_FORBIDDEN
         );
-        $request = request()->validate([
+        request()->validate([
             'office_id' => ['required', 'integer'],
-            'start_date' => ['required', 'date:Y-m-d', 'after:'.now()->addDay()->toDateString()],
+            'start_date' => ['required', 'date:Y-m-d', 'after:today'],
             'end_date' => ['required', 'date:Y-m-d', 'after:start_date'],
         ]);
         /** @var \App\Models\Office $office */
-        $office = Office::findOr($request('office_id'), ['office_id'], fn () => throw ValidationException::withMessages(['office_id' => 'Invailed Office ID']));
+        $office = Office::findOr(request('office_id'), fn () => throw ValidationException::withMessages(['office_id' => 'Invalid Office ID']));
         throw_if(
             $office->user_id == auth()->id(),
             ValidationException::withMessages(['office' => 'you cannot make reservation on your own office'])
         );
-        throw_if(
-            $office->reservations()->activeBetween()->excists(),
-            ValidationException::withMessages(['office' => 'you cannot make reservation on this time'])
-        );
 
-        Cache::lock('reservations_office_'.$office->id, 10)->block(3, function () {});
+        $reservation = Cache::lock('reservations_office_'.$office->id, 10)->block(3, function () use ($office) {
+            throw_if(
+                $office->reservations()->activeBetween()->exists(),
+                ValidationException::withMessages(['office' => 'you cannot make reservation on this time'])
+            );
 
+            return Reservation::create([
+                'user_id' => auth()->id(),
+                'office_id' => $office->id,
+                'start_date' => request('start_date'),
+                'end_date' => request('end_date'),
+                'status' => Reservation::STATUS_ACTIVE,
+                'price' => $office->totalPrice(),
+            ]);
+        });
+
+        return ReservationResource::make($reservation);
     }
 
     /**

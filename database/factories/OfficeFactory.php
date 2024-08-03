@@ -19,7 +19,7 @@ class OfficeFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::inRandomOrder()->first()->id ?? User::factory(), // Get a random user or create a new one if none exist
+            'user_id' => User::factory(), // Get a random user or create a new one if none exist
             'title' => fake()->words(3, true),
             'description' => fake()->paragraph,
             'lat' => fake()->latitude,

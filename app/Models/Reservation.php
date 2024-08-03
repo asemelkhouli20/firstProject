@@ -12,6 +12,15 @@ class Reservation extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'office_id',
+        'start_date',
+        'end_date',
+        'status',
+        'price',
+    ];
+
     /**
      * Scope a query to only include
      *

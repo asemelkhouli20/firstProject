@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Office extends Model
 {
@@ -79,5 +80,19 @@ class Office extends Model
                 [$lat, $lng]
             );
 
+    }
+
+    public function totalPrice(): float
+    {
+        $startDate = Carbon::parse(request('start_date'));
+        $endDate = Carbon::parse(request('end_date'));
+        $numberOfDays = $startDate->diffInDays($endDate) + 1;
+
+        $price = $this->price_per_day * $numberOfDays;
+        if ($numberOfDays > 28 && $this->monthly_discount) {
+            $price = $price - ($price * $this->monthly_discount / 100);
+        }
+
+        return $price;
     }
 }
